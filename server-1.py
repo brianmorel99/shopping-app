@@ -28,13 +28,17 @@ def loginUser(clientSocket):
 def drawMenu(items, item_total, order_total):
     header = ['Item ID', 'Description', 'Price (EA)', '# on Order', 'Ext. Total']
 
-    menu = f'\n| {header[0]:<7} | {header[1]:<20} | {header[2]:>10} | {header[3]:>10} | {header[4]:>12} |'
+    menu = '_____________________________________________________________________________'
+    
+    menu += f'\n| {header[0]:<7} | {header[1]:<20} | {header[2]:>11} | {header[3]:>10} | {header[4]:>13} |'
+    menu += '\n-----------------------------------------------------------------------------'
 
     for item in items:
         menu += f'\n| {item[0]:<7} | {item[1]:<20} | ${item[2]:>10} | {item[3]:>10} | ${item[4]:>12.2f} |'
 
-    menu += f'\n| 10      | Proceed to Pay       |'
+    menu += f'\n| 10      | Proceed to Pay       |             |            |               |'
     menu += f'\n| 99      | Exit                 | Totals      | {item_total:>10} | ${order_total:>12.2f} |'
+    menu += '\n-----------------------------------------------------------------------------'
     menu += '\n Selection:'
 
     return menu
