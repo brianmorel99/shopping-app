@@ -14,6 +14,8 @@ while True:
     print(message.decode("utf-8"))
 
     response = input(": ")
+    if response == "":
+        response = ' '
     client.send(response.encode("utf-8")[:1024])
 
     if response == "99":
