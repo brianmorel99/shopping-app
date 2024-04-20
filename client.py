@@ -16,6 +16,6 @@ while True:
     response = input(": ")
     client.send(response.encode("utf-8")[:1024])
 
-    if response.lower() == "exit":
+    if response == "99":
         client.close()
         break
