@@ -1,5 +1,3 @@
-# echo-client.py
-
 from cryptography.fernet import Fernet
 import socket
 

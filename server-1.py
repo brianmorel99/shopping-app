@@ -1,7 +1,6 @@
-# echo-server.py
-
 from cryptography.fernet import Fernet
 import hashlib
+import re
 import socket
 import sys
 
@@ -139,7 +138,39 @@ def checkAccess(user, pw):
         return False
 
 def checkCC(cc, expire, order_total):
-    return True
+    CCHOST = '127.0.0.1'
+    CCPORT = 11022
+    
+    ccClean = re.sub('[^0-9]+', '', cc)
+    ccValid = re.search('^[0-9]{16}$', ccClean)
+
+    expireClean = re.sub('[^0-9\/]+', '', expire)
+    expireValid = re.search('^[0-9][0-9]\/[0-9][0-9]$', expireClean)
+
+    if ccValid and expireValid:
+        client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+        addr = (CCHOST, CCPORT)
+
+        ccKey = open("skey.key", "rb").read()
+        ccFernet = Fernet(ccKey)
+
+        ccComplete = ccClean + expireClean
+        response = hashlib.md5(ccComplete.encode()).hexdigest()
+        client.sendto(encResponse(response,ccFernet)[:1500], addr)
+
+        message, addr = client.recvfrom(1500)
+        if decMessage(message,ccFernet).lower() == 'valid':
+            client.sendto(encResponse(str(order_total),ccFernet)[:1500], addr)
+            message, addr = client.recvfrom(1500)
+            if decMessage(message,ccFernet).lower() == 'success':
+                return True
+            else:
+                return False
+        else:
+            return False
+    else: 
+        return False
 
 def checkout(clientSocket, items, fernet):
     item_total = 0
@@ -169,6 +200,7 @@ def checkout(clientSocket, items, fernet):
     
     if checkCC(cc, expire, order_total) == False:
         invalidResponse(clientSocket, fernet)
+        return 2
     
     response = receipt + '\n Thanks for your Order! - Type "99" to exit'
     clientSocket.send(encResponse(response, fernet)[:1500])
