@@ -51,6 +51,23 @@ def drawMenu(items, item_total, order_total):
 
     return menu
 
+def drawReceipt(items, item_total, order_total):
+    header = ['Item ID', 'Description', 'Price (EA)', '# on Order', 'Ext. Total']
+
+    receipt = '_____________________________________________________________________________'
+    
+    receipt += f'\n| {header[0]:<7} | {header[1]:<20} | {header[2]:>11} | {header[3]:>10} | {header[4]:>13} |'
+    receipt += '\n-----------------------------------------------------------------------------'
+
+    for item in items:
+        if item[4] > 0:
+            receipt += f'\n| {item[0]:<7} | {item[1]:<20} | ${item[2]:>10} | {item[3]:>10} | ${item[4]:>12.2f} |'
+
+    receipt += f'\n|         |                      | Totals      | {item_total:>10} | ${order_total:>12.2f} |'
+    receipt += '\n-----------------------------------------------------------------------------'
+
+    return receipt
+
 def checkMenuResponse(message):
     try:
         int(message)
@@ -82,7 +99,7 @@ def shoppingMenu(clientSocket, items, fernet):
             if msgID == 99:
                 return 99
             elif msgID == 10:
-                return 10
+                return 3
             elif 0 < msgID < 7:
                 response = f'How many {items[msgID - 1][1]} would you like to order? '
                 resp = response.encode("utf-8")
@@ -121,6 +138,42 @@ def checkAccess(user, pw):
     else:
         return False
 
+def checkCC(cc, expire, order_total):
+    return True
+
+def checkout(clientSocket, items, fernet):
+    item_total = 0
+    order_total = 0.00
+
+    for item in items:
+        item_total += item[3]
+        order_total += item[3] * item[2]
+ 
+    receipt = drawReceipt(items, item_total, order_total)
+    response = receipt + '\n Everything correct (Y/N):'
+    clientSocket.send(encResponse(response, fernet)[:1500])
+    msg = clientSocket.recv(1500)
+    message = decMessage(msg, fernet)
+    if message.lower() != 'y':
+        return 2
+    
+    response = 'Please Enter Credit Card Number (0000 0000 0000 0000):'
+    clientSocket.send(encResponse(response, fernet)[:1500])
+    msg = clientSocket.recv(1500)
+    cc = decMessage(msg, fernet)
+    
+    response = 'Please Enter Expiration Date (MM/YY):'
+    clientSocket.send(encResponse(response, fernet)[:1500])
+    msg = clientSocket.recv(1500)
+    expire = decMessage(msg, fernet)
+    
+    if checkCC(cc, expire, order_total) == False:
+        invalidResponse(clientSocket, fernet)
+    
+    response = receipt + '\n Thanks for your Order! - Type "99" to exit'
+    clientSocket.send(encResponse(response, fernet)[:1500])
+    return 99
+
 def main():
     HOST = "127.0.0.1"
     PORT = 10022
@@ -151,6 +204,8 @@ def main():
                 state = loginUser(conn,fernet)
             case 2:
                 state = shoppingMenu(conn,items,fernet)
+            case 3:
+                state = checkout(conn,items,fernet)
             case _:
                 conn.close()
                 sys.exit()
