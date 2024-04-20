@@ -1,23 +1,31 @@
 # echo-server.py
 
+from cryptography.fernet import Fernet
+import hashlib
 import socket
 import sys
 
-def loginUser(clientSocket):
-    resp = "\nPlease Enter Username:".encode("utf-8")
-    clientSocket.send(resp)
-    msg = clientSocket.recv(1024)
-    username = msg.decode("utf-8")
+def encResponse(response, fernet):
+    return fernet.encrypt(response.encode("UTF-8"))
+    
+def decMessage(message, fernet):
+    return fernet.decrypt(message).decode("UTF-8")
+
+def loginUser(clientSocket,fernet):
+    resp = "\nPlease Enter Username ('exit' to disconnect):"
+    clientSocket.send(encResponse(resp, fernet)[:1500])
+    msg = clientSocket.recv(1500)
+    username = decMessage(msg,fernet)
     if username.lower() == "exit":
-        clientSocket.close()
         return 0
 
-    resp = "Please Enter Password:".encode("utf-8")
-    clientSocket.send(resp)
-    msg = clientSocket.recv(1024)
-    password = msg.decode("utf-8")
+    resp = "Please Enter Password:"
+    clientSocket.send(encResponse(resp,fernet)[:1500])
+    msg = clientSocket.recv(1500)
+    password = decMessage(msg,fernet)
+    pw = hashlib.md5(password.encode()).hexdigest()
     
-    valid = checkAccess(username, password)
+    valid = checkAccess(username, pw)
     if valid:
         newState = 2
     else:
@@ -50,13 +58,13 @@ def checkMenuResponse(message):
     except ValueError:
         return  False
 
-def invalidResponse(clientSocket):
+def invalidResponse(clientSocket, fernet):
     response = f'Invalid Response, please send any key to return to Menu: '
     resp = response.encode("utf-8")
-    clientSocket.send(resp)
-    msg = clientSocket.recv(1024)
+    clientSocket.send(encResponse(response,fernet)[:1500])
+    msg = clientSocket.recv(1500)
 
-def shoppingMenu(clientSocket, items):
+def shoppingMenu(clientSocket, items, fernet):
     item_total = 0
     order_total = 0.00
 
@@ -66,10 +74,9 @@ def shoppingMenu(clientSocket, items):
 
     while True:
         menu = drawMenu(items, item_total, order_total)
-        resp = menu.encode("utf-8")
-        clientSocket.send(resp)
-        msg = clientSocket.recv(1024)
-        message = msg.decode("utf-8")
+        clientSocket.send(encResponse(menu, fernet)[:1500])
+        msg = clientSocket.recv(1500)
+        message = decMessage(msg, fernet)
         if checkMenuResponse(message):
             msgID = int(message)
             if msgID == 99:
@@ -79,9 +86,9 @@ def shoppingMenu(clientSocket, items):
             elif 0 < msgID < 7:
                 response = f'How many {items[msgID - 1][1]} would you like to order? '
                 resp = response.encode("utf-8")
-                clientSocket.send(resp)
-                msg = clientSocket.recv(1024)
-                message = msg.decode("utf-8")
+                clientSocket.send(encResponse(response, fernet)[:1500])
+                msg = clientSocket.recv(1500)
+                message = decMessage(msg,fernet)
                 if checkMenuResponse(message):
                     qty = int(message)
                     if qty + items[msgID -1][3] < 0:
@@ -95,22 +102,31 @@ def shoppingMenu(clientSocket, items):
                         item_total += qty
                         order_total += qty * items[msgID -1][2]
                 else:
-                    invalidResponse(clientSocket)
+                    invalidResponse(clientSocket, fernet)
                     return 2
             else:
-                invalidResponse(clientSocket)
+                invalidResponse(clientSocket, fernet)
                 return 2
         else:
-            invalidResponse(clientSocket)
+            invalidResponse(clientSocket, fernet)
             return 2
     return 2
 
 def checkAccess(user, pw):
-    return True
+    with open("Login.txt", "r") as loginfile:
+        valid = (user + "," + pw + "\n") in loginfile.readlines()
+    
+    if valid:
+        return True
+    else:
+        return False
 
 def main():
     HOST = "127.0.0.1"
     PORT = 10022
+
+    key = open("key.key", "rb").read()
+    fernet = Fernet(key)
 
     items = [[1,'Hamburger', 4.99, 0, 0.00],
             [2,'Cheeseburger', 5.99, 0, 0.00],
@@ -132,9 +148,9 @@ def main():
     while True:
         match state:
             case 1:
-                state = loginUser(conn)
+                state = loginUser(conn,fernet)
             case 2:
-                state = shoppingMenu(conn,items)
+                state = shoppingMenu(conn,items,fernet)
             case _:
                 conn.close()
                 sys.exit()
