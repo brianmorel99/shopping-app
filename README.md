@@ -1,6 +1,7 @@
 # Shopping Cart App with Socket Programming
 
 This is a simple shopping cart application for CSIS 501.  It is written in python and utilizes socket based programming with both TCP and UDP connections.
+Includes Shopping-Cart-Screenshot.PNG which is for my teacher to see examples of invalid and valid login.
 
 ## Getting started
 
