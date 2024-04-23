@@ -10,7 +10,7 @@ You will need three terminal / shell sessions to run this software.  It has only
 You will need to extract the files from archive, or download from git via the below command.
 
 ```shell
-git pull https://github.com/brianmorel99/shopping-app.git
+git clone https://github.com/brianmorel99/shopping-app.git
 ```
 Either way, change into the directory created in all three terminal / shell sessions
 
