@@ -36,7 +36,7 @@ All interaction will then be from client.py.
 
 # Login Data / CC Data
 
-There are three files for helping create test users, test credit cards, and the cncryption keys.
+There are three files for helping create test users, test credit cards, and the encryption keys.
 
 You do not need to run these files, as the files they output are already stored in the repository for use.
 
